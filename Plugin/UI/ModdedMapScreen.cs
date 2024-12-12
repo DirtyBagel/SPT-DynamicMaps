@@ -17,66 +17,62 @@ using UnityEngine;
 using UnityEngine.UI;
 using DynamicMaps.ExternalModSupport.SamSWATHeliCrash;
 using EFT;
+using UnityEngine.Serialization;
 
 namespace DynamicMaps.UI
 {
-    public class ModdedMapScreen : MonoBehaviour
+    internal class ModdedMapScreen : MonoBehaviour
     {
         #region Variables and Declerations
 
-        private const string _mapRelPath = "Maps";
-
-        private bool _initialized = false;
+        private const string MapRelPath = "Maps";
         
-        private static float _positionTweenTime = 0.25f;
-        private static float _scrollZoomScaler = 1.75f;
-        private static float _zoomScrollTweenTime = 0.25f;
-
-        private static Vector2 _levelSliderPosition = new Vector2(15f, 750f);
-        private static Vector2 _mapSelectDropdownPosition = new Vector2(-780f, -50f);
-        private static Vector2 _mapSelectDropdownSize = new Vector2(360f, 31f);
-        private static Vector2 _maskSizeModifierInRaid = new Vector2(0, -42f);
-        private static Vector2 _maskPositionInRaid = new Vector2(0, -20f);
-        private static Vector2 _maskSizeModifierOutOfRaid = new Vector2(0, -70f);
-        private static Vector2 _maskPositionOutOfRaid = new Vector2(0, -5f);
-        private static Vector2 _textAnchor = new Vector2(0f, 1f);
-        private static Vector2 _cursorPositionTextOffset = new Vector2(15f, -52f);
-        private static Vector2 _playerPositionTextOffset = new Vector2(15f, -68f);
-        private static float _positionTextFontSize = 15f;
+        private const float PositionTweenTime = 0.25f;
+        private const float ScrollZoomScaler = 1.75f;
+        private const float ZoomScrollTweenTime = 0.25f;
+        private const float PositionTextFontSize = 15f;
         
-        public RectTransform RectTransform => gameObject.GetRectTransform();
-
-        private RectTransform _parentTransform => gameObject.transform.parent as RectTransform;
+        private static readonly Vector2 LevelSliderPosition = new(15f, 750f);
+        private static readonly Vector2 MapSelectDropdownPosition = new(-780f, -50f);
+        private static readonly Vector2 MapSelectDropdownSize = new(360f, 31f);
+        private static readonly Vector2 MaskSizeModifierInRaid = new(0, -42f);
+        private static readonly Vector2 MaskPositionInRaid = new(0, -20f);
+        private static readonly Vector2 MaskSizeModifierOutOfRaid = new(0, -70f);
+        private static readonly Vector2 MaskPositionOutOfRaid = new(0, -5f);
+        private static readonly Vector2 TextAnchor = new(0f, 1f);
+        private static readonly Vector2 CursorPositionTextOffset = new(15f, -52f);
+        private static readonly Vector2 PlayerPositionTextOffset = new(15f, -68f);
+        
+        private bool _initialized;
+        
+        private RectTransform RectTransform => gameObject.GetRectTransform();
+        private RectTransform ParentTransform => gameObject.transform.parent as RectTransform;
 
         private bool _isShown = false;
 
         // map and transport mechanism
         private ScrollRect _scrollRect;
         private Mask _scrollMask;
-        private MapView _mapView;
-
+        
         // map controls
         private LevelSelectSlider _levelSelectSlider;
         private MapSelectDropdown _mapSelectDropdown;
         private CursorPositionText _cursorPositionText;
         private PlayerPositionText _playerPositionText;
 
-        // peek
-        private MapPeekComponent _peekComponent;
-        private bool _isPeeking => _peekComponent != null && _peekComponent.IsPeeking;
-        private bool _showingMiniMap => _peekComponent != null && _peekComponent.ShowingMiniMap;
-        
-        public bool IsShowingMapScreen { get; private set; }
+        // Map view mode controller
+        public MapView MapView { get; private set; }
+        public MapViewModeController ViewModeController { get; private set; }
         
         // dynamic map marker providers
-        private Dictionary<Type, IDynamicMarkerProvider> _dynamicMarkerProviders = [];
+        private readonly Dictionary<Type, IDynamicMarkerProvider> _dynamicMarkerProviders = [];
 
         // config
         private bool _autoCenterOnPlayerMarker = true;
         private bool _autoSelectLevel = true;
         private bool _resetZoomOnCenter = false;
-        private bool _rememberMapPosition = true;
         private bool _transitionAnimations = true;
+        public bool RememberMapPosition { get; private set; } = true;
         
         private float _centeringZoomResetPoint = 0f;
         private KeyboardShortcut _centerPlayerShortcut;
@@ -119,7 +115,7 @@ namespace DynamicMaps.UI
             Settings.MiniMapSizeX.SettingChanged += (sender, args) => AdjustForMiniMap(false); 
             Settings.MiniMapSizeY.SettingChanged += (sender, args) => AdjustForMiniMap(false); 
             
-            _mapView = MapView.Create(scrollMaskGO, "MapView");
+            MapView = MapView.Create(scrollMaskGO, "MapView");
 
             // set up mask; size will be set later in Raid/NoRaid
             var scrollMaskImage = scrollMaskGO.AddComponent<Image>();
@@ -131,7 +127,7 @@ namespace DynamicMaps.UI
             _scrollRect.scrollSensitivity = 0;  // don't scroll on mouse wheel
             _scrollRect.movementType = ScrollRect.MovementType.Unrestricted;
             _scrollRect.viewport = _scrollMask.GetRectTransform();
-            _scrollRect.content = _mapView.RectTransform;
+            _scrollRect.content = MapView.RectTransform;
 
             // create map controls
 
@@ -139,8 +135,8 @@ namespace DynamicMaps.UI
             var sliderPrefab = Singleton<CommonUI>.Instance.transform.Find(
                 "Common UI/InventoryScreen/Map Panel/MapBlock/ZoomScroll").gameObject;
             _levelSelectSlider = LevelSelectSlider.Create(sliderPrefab, RectTransform);
-            _levelSelectSlider.OnLevelSelectedBySlider += _mapView.SelectTopLevel;
-            _mapView.OnLevelSelected += (level) => _levelSelectSlider.SelectedLevel = level;
+            _levelSelectSlider.OnLevelSelectedBySlider += MapView.SelectTopLevel;
+            MapView.OnLevelSelected += (level) => _levelSelectSlider.SelectedLevel = level;
 
             // map select dropdown, this will call LoadMap on the first option
             var selectPrefab = Singleton<CommonUI>.Instance.transform.Find(
@@ -149,13 +145,13 @@ namespace DynamicMaps.UI
             _mapSelectDropdown.OnMapSelected += ChangeMap;
 
             // texts
-            _cursorPositionText = CursorPositionText.Create(gameObject, _mapView.RectTransform, _positionTextFontSize);
-            _cursorPositionText.RectTransform.anchorMin = _textAnchor;
-            _cursorPositionText.RectTransform.anchorMax = _textAnchor;
+            _cursorPositionText = CursorPositionText.Create(gameObject, MapView.RectTransform, PositionTextFontSize);
+            _cursorPositionText.RectTransform.anchorMin = TextAnchor;
+            _cursorPositionText.RectTransform.anchorMax = TextAnchor;
 
-            _playerPositionText = PlayerPositionText.Create(gameObject, _positionTextFontSize);
-            _playerPositionText.RectTransform.anchorMin = _textAnchor;
-            _playerPositionText.RectTransform.anchorMax = _textAnchor;
+            _playerPositionText = PlayerPositionText.Create(gameObject, PositionTextFontSize);
+            _playerPositionText.RectTransform.anchorMin = TextAnchor;
+            _playerPositionText.RectTransform.anchorMax = TextAnchor;
             _playerPositionText.gameObject.SetActive(false);
 
             // read config before setting up marker providers
@@ -164,7 +160,7 @@ namespace DynamicMaps.UI
             GameWorldOnDestroyPatch.OnRaidEnd += OnRaidEnd;
 
             // load initial maps from path
-            _mapSelectDropdown.LoadMapDefsFromPath(_mapRelPath);
+            _mapSelectDropdown.LoadMapDefsFromPath(MapRelPath);
             PrecacheMapLayerImages();
         }
 
@@ -191,8 +187,8 @@ namespace DynamicMaps.UI
                 }
             }
 
-            // change level hotkeys
-            if (!_showingMiniMap)
+            // Handle actions for peek and main map view
+            if (ViewModeController.CurrentMapViewMode != EMapViewMode.MiniMap)
             {
                 if (_moveMapLevelUpShortcut.BetterIsDown())
                 {
@@ -203,14 +199,10 @@ namespace DynamicMaps.UI
                 {
                     _levelSelectSlider.ChangeLevelBy(-1);
                 }
-            }
-            
-            // shift hotkeys
-            var shiftMapX = 0f;
-            var shiftMapY = 0f;
-
-            if (!_showingMiniMap)
-            {
+                
+                var shiftMapX = 0f;
+                var shiftMapY = 0f;
+                
                 if (_moveMapUpShortcut.BetterIsPressed())
                 {
                     shiftMapY += 1f;
@@ -230,14 +222,14 @@ namespace DynamicMaps.UI
                 {
                     shiftMapX += 1f;
                 }
+                
+                if (shiftMapX != 0f || shiftMapY != 0f)
+                {
+                    MapView.ScaledShiftMap(new Vector2(shiftMapX, shiftMapY), _moveMapSpeed * Time.deltaTime, false);
+                }
             }
             
-            if (shiftMapX != 0f || shiftMapY != 0f)
-            {
-                _mapView.ScaledShiftMap(new Vector2(shiftMapX, shiftMapY), _moveMapSpeed * Time.deltaTime, false);
-            }
-
-            if (_showingMiniMap)
+            if (ViewModeController.CurrentMapViewMode == EMapViewMode.MiniMap)
             {
                 OnZoomMini();
 
@@ -265,43 +257,7 @@ namespace DynamicMaps.UI
         #endregion
 
         #region Show And Hide Top Level
-
-        internal void OnMapScreenShow()
-        {
-            if (_peekComponent is not null)
-            {
-                _peekComponent.WasMiniMapActive = _showingMiniMap;
-                
-                _peekComponent?.EndPeek();
-                _peekComponent?.EndMiniMap();
-            }
-
-            IsShowingMapScreen = true;
-
-            if (_rememberMapPosition)
-            {
-                _mapView.SetMapPos(_mapView.MainMapPos, 0f);
-            }
-            
-            transform.parent.Find("MapBlock").gameObject.SetActive(false);
-            transform.parent.Find("EmptyBlock").gameObject.SetActive(false);
-            transform.parent.gameObject.SetActive(true);
-
-            Show(false);
-        }
-
-        internal void OnMapScreenClose()
-        {
-            Hide();
-
-            IsShowingMapScreen = false;
-            
-            if (_peekComponent is not null && _peekComponent.WasMiniMapActive)
-            {
-                _peekComponent.BeginMiniMap();
-            }
-        }
-
+        
         internal void Show(bool playAnimation)
         {
             if (!_initialized)
@@ -314,7 +270,7 @@ namespace DynamicMaps.UI
             gameObject.SetActive(GameUtils.ShouldShowMapInRaid());
 
             // populate map select dropdown
-            _mapSelectDropdown.LoadMapDefsFromPath(_mapRelPath);
+            _mapSelectDropdown.LoadMapDefsFromPath(MapRelPath);
 
             if (GameUtils.IsInRaid())
             {
@@ -356,25 +312,25 @@ namespace DynamicMaps.UI
             {
                 try
                 {
-                    dynamicProvider.OnRaidEnd(_mapView);
+                    dynamicProvider.OnRaidEnd(MapView);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnRaidEnd");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnRaidEnd");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
 
             // reset peek and remove reference, it will be destroyed very shortly with parent object
-            _peekComponent?.EndPeek();
-            _peekComponent?.EndMiniMap();
+            ViewModeController?.EndPeek();
+            ViewModeController?.EndMiniMap();
             
-            Destroy(_peekComponent.gameObject);
-            _peekComponent = null;
+            Destroy(ViewModeController.gameObject);
+            ViewModeController = null;
 
             // unload map completely when raid ends, since we've removed markers
-            _mapView.UnloadMap();
+            MapView.UnloadMap();
         }
         
         #endregion
@@ -390,23 +346,23 @@ namespace DynamicMaps.UI
 
             _scrollRect.GetRectTransform().sizeDelta = RectTransform.sizeDelta;
 
-            _scrollMask.GetRectTransform().anchoredPosition = _maskPositionOutOfRaid;
-            _scrollMask.GetRectTransform().sizeDelta = RectTransform.sizeDelta + _maskSizeModifierOutOfRaid;
+            _scrollMask.GetRectTransform().anchoredPosition = MaskPositionOutOfRaid;
+            _scrollMask.GetRectTransform().sizeDelta = RectTransform.sizeDelta + MaskSizeModifierOutOfRaid;
 
-            _levelSelectSlider.RectTransform.anchoredPosition = _levelSliderPosition;
+            _levelSelectSlider.RectTransform.anchoredPosition = LevelSliderPosition;
 
-            _mapSelectDropdown.RectTransform.sizeDelta = _mapSelectDropdownSize;
-            _mapSelectDropdown.RectTransform.anchoredPosition = _mapSelectDropdownPosition;
+            _mapSelectDropdown.RectTransform.sizeDelta = MapSelectDropdownSize;
+            _mapSelectDropdown.RectTransform.anchoredPosition = MapSelectDropdownPosition;
 
-            _cursorPositionText.RectTransform.anchoredPosition = _cursorPositionTextOffset;
-            _playerPositionText.RectTransform.anchoredPosition = _playerPositionTextOffset;
+            _cursorPositionText.RectTransform.anchoredPosition = CursorPositionTextOffset;
+            _playerPositionText.RectTransform.anchoredPosition = PlayerPositionTextOffset;
         }
 
         private void AdjustForOutOfRaid()
         {
             // adjust mask
-            _scrollMask.GetRectTransform().anchoredPosition = _maskPositionOutOfRaid;
-            _scrollMask.GetRectTransform().sizeDelta = RectTransform.sizeDelta + _maskSizeModifierOutOfRaid;
+            _scrollMask.GetRectTransform().anchoredPosition = MaskPositionOutOfRaid;
+            _scrollMask.GetRectTransform().sizeDelta = RectTransform.sizeDelta + MaskSizeModifierOutOfRaid;
 
             // turn on cursor and off player position texts
             _cursorPositionText.gameObject.SetActive(true);
@@ -419,8 +375,8 @@ namespace DynamicMaps.UI
             var speed = playAnimation ? 0.35f : 0f;
             
             // adjust mask
-            _scrollMask.GetRectTransform().DOSizeDelta(RectTransform.sizeDelta + _maskSizeModifierInRaid, _transitionAnimations ? speed : 0f);
-            _scrollMask.GetRectTransform().DOAnchorPos(_maskPositionInRaid, _transitionAnimations ? speed : 0f);
+            _scrollMask.GetRectTransform().DOSizeDelta(RectTransform.sizeDelta + MaskSizeModifierInRaid, _transitionAnimations ? speed : 0f);
+            _scrollMask.GetRectTransform().DOAnchorPos(MaskPositionInRaid, _transitionAnimations ? speed : 0f);
             
             // turn both cursor and player position texts on
             _cursorPositionText.gameObject.SetActive(true);
@@ -520,11 +476,12 @@ namespace DynamicMaps.UI
 
         private void OnShowInRaid(bool playAnimation)
         {
-            if (_showingMiniMap)
+            if (ViewModeController.CurrentMapViewMode == EMapViewMode.MiniMap)
             {
                 AdjustForMiniMap(playAnimation);
             }
-            else if (_isPeeking)
+            
+            if (ViewModeController.CurrentMapViewMode == EMapViewMode.Peek)
             {
                 AdjustForPeek(playAnimation);
             }
@@ -542,13 +499,13 @@ namespace DynamicMaps.UI
             {
                 try
                 {
-                    dynamicProvider.OnShowInRaid(_mapView);
+                    dynamicProvider.OnShowInRaid(MapView);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnShowInRaid");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnShowInRaid");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
 
@@ -564,27 +521,30 @@ namespace DynamicMaps.UI
             // select layers to show
             if (_autoSelectLevel)
             {
-                _mapView.SelectLevelByCoords(mapPosition);
+                MapView.SelectLevelByCoords(mapPosition);
             }
 
+            // These are not related to the mini-map
+            if (ViewModeController.CurrentMapViewMode != EMapViewMode.MiniMap) return;
+            
             // Don't set the map position if we're the mini-map, otherwise it can cause artifacting
-            if (_rememberMapPosition && !_showingMiniMap && _mapView.MainMapPos != Vector2.zero)
+            if (RememberMapPosition && MapView.MainMapPos != Vector2.zero)
             {
-                _mapView.SetMapPos(_mapView.MainMapPos, _transitionAnimations ? 0.35f : 0f);
+                MapView.SetMapPos(MapView.MainMapPos, _transitionAnimations ? 0.35f : 0f);
                 return;
             }
             
             // Auto centering while the minimap is active here can cause artifacting
-            if (_autoCenterOnPlayerMarker && !_showingMiniMap)
+            if (_autoCenterOnPlayerMarker)
             {
                 // change zoom to desired level
                 if (_resetZoomOnCenter)
                 {
-                    _mapView.SetMapZoom(GetInRaidStartingZoom(), 0);
+                    MapView.SetMapZoom(GetInRaidStartingZoom(), 0);
                 }
 
                 // shift map to player position, Vector3 to Vector2 discards z
-                _mapView.ShiftMapToCoordinate(mapPosition, 0, false);
+                MapView.ShiftMapToCoordinate(mapPosition, 0, false);
             }
         }
 
@@ -594,13 +554,13 @@ namespace DynamicMaps.UI
             {
                 try
                 {
-                    dynamicProvider.OnHideInRaid(_mapView);
+                    dynamicProvider.OnHideInRaid(MapView);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnHideInRaid");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnHideInRaid");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
         }
@@ -613,7 +573,7 @@ namespace DynamicMaps.UI
             _mapSelectDropdown.ClearFilter();
 
             // load first available map if no maps loaded
-            if (_mapView.CurrentMapDef == null)
+            if (MapView.CurrentMapDef == null)
             {
                 _mapSelectDropdown.LoadFirstAvailableMap();
             }
@@ -622,13 +582,13 @@ namespace DynamicMaps.UI
             {
                 try
                 {
-                    dynamicProvider.OnShowOutOfRaid(_mapView);
+                    dynamicProvider.OnShowOutOfRaid(MapView);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnShowOutOfRaid");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnShowOutOfRaid");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
         }
@@ -639,13 +599,13 @@ namespace DynamicMaps.UI
             {
                 try
                 {
-                    dynamicProvider.OnHideOutOfRaid(_mapView);
+                    dynamicProvider.OnHideOutOfRaid(MapView);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnHideOutOfRaid");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in OnHideOutOfRaid");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
         }
@@ -656,11 +616,8 @@ namespace DynamicMaps.UI
         
         private void OnScroll(float scrollAmount)
         {
-            if (_isPeeking || _showingMiniMap)
-            {
-                return;
-            }
-
+            if (ViewModeController.CurrentMapViewMode != EMapViewMode.MapScreen) return;
+            
             if (Input.GetKey(KeyCode.LeftShift))
             {
                 if (scrollAmount > 0)
@@ -676,10 +633,10 @@ namespace DynamicMaps.UI
             }
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                _mapView.RectTransform, Input.mousePosition, null, out Vector2 mouseRelative);
+                MapView.RectTransform, Input.mousePosition, null, out Vector2 mouseRelative);
 
-            var zoomDelta = scrollAmount * _mapView.ZoomCurrent * _scrollZoomScaler;
-            _mapView.IncrementalZoomInto(zoomDelta, mouseRelative, _zoomScrollTweenTime);
+            var zoomDelta = scrollAmount * MapView.ZoomCurrent * ScrollZoomScaler;
+            MapView.IncrementalZoomInto(zoomDelta, mouseRelative, ZoomScrollTweenTime);
         }
 
         private void OnZoomMain()
@@ -698,14 +655,14 @@ namespace DynamicMaps.UI
             
             if (zoomAmount != 0f)
             {
-                var currentCenter = _mapView.RectTransform.anchoredPosition / _mapView.ZoomMain;
-                zoomAmount = _mapView.ZoomMain * zoomAmount * (_zoomMapHotkeySpeed * Time.deltaTime);
-                _mapView.IncrementalZoomInto(zoomAmount, currentCenter, 0f);
+                var currentCenter = MapView.RectTransform.anchoredPosition / MapView.ZoomMain;
+                zoomAmount = MapView.ZoomMain * zoomAmount * (_zoomMapHotkeySpeed * Time.deltaTime);
+                MapView.IncrementalZoomInto(zoomAmount, currentCenter, 0f);
                 
                 return;
             }
             
-            _mapView.SetMapZoom(_mapView.ZoomMain, 0f);
+            MapView.SetMapZoom(MapView.ZoomMain, 0f);
         }
 
         private void OnZoomMini()
@@ -726,32 +683,33 @@ namespace DynamicMaps.UI
             {
                 var player = GameUtils.GetMainPlayer();
                 var mapPosition = MathUtils.ConvertToMapPosition(((IPlayer)player).Position);
-                zoomAmount = _mapView.ZoomMini * zoomAmount * (_zoomMapHotkeySpeed * Time.deltaTime);
+                zoomAmount = MapView.ZoomMini * zoomAmount * (_zoomMapHotkeySpeed * Time.deltaTime);
                     
-                _mapView.IncrementalZoomIntoMiniMap(zoomAmount, mapPosition, 0.0f);
+                MapView.IncrementalZoomIntoMiniMap(zoomAmount, mapPosition, 0.0f);
                 
                 return;
             }
             
-            _mapView.SetMapZoom(_mapView.ZoomMini, 0f, false, true);
+            MapView.SetMapZoom(MapView.ZoomMini, 0f, false, true);
         }
 
         private void OnCenter()
         {
-            if (_centerPlayerShortcut.BetterIsDown() || _showingMiniMap)
+            if (_centerPlayerShortcut.BetterIsDown() || ViewModeController.CurrentMapViewMode == EMapViewMode.MiniMap)
             {
                 var player = GameUtils.GetMainPlayer();
                 
                 if (player is not null)
                 {
                     var mapPosition = MathUtils.ConvertToMapPosition(((IPlayer)player).Position);
+                    var showingMiniMap = ViewModeController.CurrentMapViewMode == EMapViewMode.MiniMap;
                     
-                    _mapView.ShiftMapToCoordinate(
+                    MapView.ShiftMapToCoordinate(
                         mapPosition, 
-                        _showingMiniMap ? 0f : _positionTweenTime, 
-                        _showingMiniMap);
+                        showingMiniMap ? 0f : PositionTweenTime, 
+                        showingMiniMap);
                     
-                    _mapView.SelectLevelByCoords(mapPosition);
+                    MapView.SelectLevelByCoords(mapPosition);
                 }
             }
         }
@@ -784,24 +742,24 @@ namespace DynamicMaps.UI
 
             _autoCenterOnPlayerMarker = Settings.AutoCenterOnPlayerMarker.Value;
             _resetZoomOnCenter = Settings.ResetZoomOnCenter.Value;
-            _rememberMapPosition = Settings.RetainMapPosition.Value;
+            RememberMapPosition = Settings.RetainMapPosition.Value;
             
             _autoSelectLevel = Settings.AutoSelectLevel.Value;
             _centeringZoomResetPoint = Settings.CenteringZoomResetPoint.Value;
 
             _transitionAnimations = Settings.MapTransitionEnabled.Value;
             
-            if (_mapView is not null)
+            if (MapView is not null)
             {
-                _mapView.ZoomMain = Settings.ZoomMainMap.Value;
-                _mapView.ZoomMini = Settings.ZoomMiniMap.Value;
+                MapView.ZoomMain = Settings.ZoomMainMap.Value;
+                MapView.ZoomMini = Settings.ZoomMiniMap.Value;
             }
             
-            if (_peekComponent is not null)
+            if (ViewModeController is not null)
             {
-                _peekComponent.PeekShortcut = Settings.PeekShortcut.Value;
-                _peekComponent.HoldForPeek = Settings.HoldForPeek.Value;
-                _peekComponent.HideMinimapShortcut = Settings.MiniMapShowOrHide.Value;
+                ViewModeController.PeekShortcut = Settings.PeekShortcut.Value;
+                ViewModeController.HoldForPeek = Settings.HoldForPeek.Value;
+                ViewModeController.HideMinimapShortcut = Settings.MiniMapShowOrHide.Value;
             }
 
             AddRemoveMarkerProvider<PlayerMarkerProvider>(Settings.ShowPlayerMarker.Value);
@@ -835,7 +793,7 @@ namespace DynamicMaps.UI
             if (Settings.ShowTransitPointsInRaid.Value)
             {
                 GetMarkerProvider<TransitMarkerProvider>()
-                    .RefreshMarkers(_mapView);
+                    .RefreshMarkers(MapView);
             }
             
             // extracts
@@ -894,16 +852,16 @@ namespace DynamicMaps.UI
         internal void TryAddPeekComponent(EftBattleUIScreen battleUI)
         {
             // Peek component already instantiated, return
-            if (_peekComponent is not null)
+            if (ViewModeController is not null)
             {
                 return;
             }
 
-            Plugin.Log.LogInfo("Trying to attach peek component to BattleUI");
+            DynamicMapsPlugin.Log.LogInfo("Trying to attach peek component to BattleUI");
 
-            _peekComponent = MapPeekComponent.Create(battleUI.gameObject);
-            _peekComponent.MapScreen = this;
-            _peekComponent.MapScreenTrueParent = _parentTransform;
+            ViewModeController = MapViewModeController.Create(battleUI.gameObject);
+            ViewModeController.MapScreen = this;
+            ViewModeController.MapScreenTrueParent = ParentTransform;
 
             ReadConfig();
         }
@@ -917,16 +875,16 @@ namespace DynamicMaps.UI
                 // if the map is shown, need to call OnShowXXXX
                 if (_isShown && GameUtils.IsInRaid())
                 {
-                    _dynamicMarkerProviders[typeof(T)].OnShowInRaid(_mapView);
+                    _dynamicMarkerProviders[typeof(T)].OnShowInRaid(MapView);
                 }
                 else if (_isShown && !GameUtils.IsInRaid())
                 {
-                    _dynamicMarkerProviders[typeof(T)].OnShowOutOfRaid(_mapView);
+                    _dynamicMarkerProviders[typeof(T)].OnShowOutOfRaid(MapView);
                 }
             }
             else if (!status && _dynamicMarkerProviders.ContainsKey(typeof(T)))
             {
-                _dynamicMarkerProviders[typeof(T)].OnDisable(_mapView);
+                _dynamicMarkerProviders[typeof(T)].OnDisable(MapView);
                 _dynamicMarkerProviders.Remove(typeof(T));
             }
         }
@@ -947,37 +905,37 @@ namespace DynamicMaps.UI
 
         private float GetInRaidStartingZoom()
         {
-            var startingZoom = _mapView.ZoomMin;
-            startingZoom += _centeringZoomResetPoint * (_mapView.ZoomMax - _mapView.ZoomMin);
+            var startingZoom = MapView.ZoomMin;
+            startingZoom += _centeringZoomResetPoint * (MapView.ZoomMax - MapView.ZoomMin);
 
             return startingZoom;
         }
 
         private void ChangeMap(MapDef mapDef)
         {
-            if (mapDef == null || _mapView.CurrentMapDef == mapDef)
+            if (mapDef == null || MapView.CurrentMapDef == mapDef)
             {
                 return;
             }
 
-            Plugin.Log.LogInfo($"MapScreen: Loading map {mapDef.DisplayName}");
+            DynamicMapsPlugin.Log.LogInfo($"MapScreen: Loading map {mapDef.DisplayName}");
 
-            _mapView.LoadMap(mapDef);
+            MapView.LoadMap(mapDef);
 
             _mapSelectDropdown.OnLoadMap(mapDef);
-            _levelSelectSlider.OnLoadMap(mapDef, _mapView.SelectedLevel);
+            _levelSelectSlider.OnLoadMap(mapDef, MapView.SelectedLevel);
 
             foreach (var dynamicProvider in _dynamicMarkerProviders.Values)
             {
                 try
                 {
-                    dynamicProvider.OnMapChanged(_mapView, mapDef);
+                    dynamicProvider.OnMapChanged(MapView, mapDef);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in ChangeMap");
-                    Plugin.Log.LogError($"  Exception given was: {e.Message}");
-                    Plugin.Log.LogError($"  {e.StackTrace}");
+                    DynamicMapsPlugin.Log.LogError($"Dynamic marker provider {dynamicProvider} threw exception in ChangeMap");
+                    DynamicMapsPlugin.Log.LogError($"  Exception given was: {e.Message}");
+                    DynamicMapsPlugin.Log.LogError($"  {e.StackTrace}");
                 }
             }
         }
@@ -995,7 +953,7 @@ namespace DynamicMaps.UI
                 foreach (var layerDef in mapDef.Layers.Values)
                 {
                     // just load sprite to cache it, one a frame
-                    Plugin.Log.LogInfo($"Precaching sprite: {layerDef.ImagePath}");
+                    DynamicMapsPlugin.Log.LogInfo($"Precaching sprite: {layerDef.ImagePath}");
                     TextureUtils.GetOrLoadCachedSprite(layerDef.ImagePath);
                     yield return null;
                 }

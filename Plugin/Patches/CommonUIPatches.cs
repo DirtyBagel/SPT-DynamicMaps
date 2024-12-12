@@ -21,7 +21,7 @@ namespace DynamicMaps.Patches
         {
             var mapScreen = Traverse.Create(__instance.InventoryScreen).Field("_mapScreen").GetValue<MapScreen>();
             
-            Plugin.Instance.TryAttachToMapScreen(mapScreen);
+            DynamicMapsPlugin.Instance.TryAttachToMapScreen(mapScreen);
         }
     }
 }

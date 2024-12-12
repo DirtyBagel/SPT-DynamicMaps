@@ -18,10 +18,10 @@ namespace DynamicMaps
     [BepInPlugin("com.mpstark.DynamicMaps", "DynamicMaps", BuildInfo.Version)]
     [BepInDependency("com.SPT.custom", "3.10.0")]
     [BepInDependency("com.SamSWAT.HeliCrash.ArysReloaded", BepInDependency.DependencyFlags.SoftDependency)]
-    public class Plugin : BaseUnityPlugin
+    internal class DynamicMapsPlugin : BaseUnityPlugin
     {
         public const int TarkovVersion = 33420;
-        public static Plugin Instance;
+        public static DynamicMapsPlugin Instance;
         public static ManualLogSource Log => Instance.Logger;
         public static string Path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 

@@ -222,7 +222,7 @@ namespace DynamicMaps.Utils
 
             if (!MapLookUp.TryGetValue(currentLocation, out var id))
             {
-                Plugin.Log.LogWarning($"Could not find map id for location {currentLocation} is this a new location?");
+                DynamicMapsPlugin.Log.LogWarning($"Could not find map id for location {currentLocation} is this a new location?");
                 return true;
             }
                     

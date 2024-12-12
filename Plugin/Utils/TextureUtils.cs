@@ -28,7 +28,7 @@ namespace DynamicMaps.Utils
                 return _spriteCache[path];
             }
 
-            var absolutePath = Path.Combine(Plugin.Path, path);
+            var absolutePath = Path.Combine(DynamicMapsPlugin.Path, path);
             var texture = LoadTexture2DFromPath(absolutePath);
             _spriteCache[path] = Sprite.Create(texture,
                                                new Rect(0f, 0f, texture.width, texture.height),

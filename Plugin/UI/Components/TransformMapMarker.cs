@@ -51,7 +51,7 @@ namespace DynamicMaps.UI.Components
             {
                 if (!_warnedAttachedIsDisabled)
                 {
-                    Plugin.Log.LogWarning($"FollowingTransform for TransformMapMarker has been disabled without removing the map marker");
+                    DynamicMapsPlugin.Log.LogWarning($"FollowingTransform for TransformMapMarker has been disabled without removing the map marker");
                     Color = Color.red;
                     _warnedAttachedIsDisabled = true;
                 }

@@ -28,7 +28,7 @@ namespace DynamicMaps.Patches
             IsAttached = GameUtils.ShouldShowMapInRaid();
             if (!IsAttached) return;
             
-            Plugin.Instance.TryAttachToBattleUIScreen(__instance);
+            DynamicMapsPlugin.Instance.TryAttachToBattleUIScreen(__instance);
         }
     }
 }

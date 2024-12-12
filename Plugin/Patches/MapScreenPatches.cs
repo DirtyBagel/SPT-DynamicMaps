@@ -23,19 +23,19 @@ namespace DynamicMaps.Patches
                 if (!Settings.ReplaceMapScreen.Value || !GameUtils.ShouldShowMapInRaid())
                 {
                     // mod is disabled
-                    Plugin.Instance.Map?.OnMapScreenClose();
+                    DynamicMapsPlugin.Instance.Map?.ViewModeController?.EndMapScreen();
                     return true;
                 }
 
                 // show instead
-                Plugin.Instance.Map?.OnMapScreenShow();
+                DynamicMapsPlugin.Instance.Map?.ViewModeController?.ShowMapScreen();
                 return false;
             }
             catch(Exception e)
             {
-                Plugin.Log.LogError($"Caught error while trying to show map");
-                Plugin.Log.LogError($"{e.Message}");
-                Plugin.Log.LogError($"{e.StackTrace}");
+                DynamicMapsPlugin.Log.LogError($"Caught error while trying to show map");
+                DynamicMapsPlugin.Log.LogError($"{e.Message}");
+                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
 
                 return true;
             }
@@ -61,14 +61,14 @@ namespace DynamicMaps.Patches
                 }
 
                 // close instead
-                Plugin.Instance.Map?.OnMapScreenClose();
+                DynamicMapsPlugin.Instance.Map?.ViewModeController?.EndMapScreen();
                 return false;
             }
             catch(Exception e)
             {
-                Plugin.Log.LogError($"Caught error while trying to close map");
-                Plugin.Log.LogError($"{e.Message}");
-                Plugin.Log.LogError($"{e.StackTrace}");
+                DynamicMapsPlugin.Log.LogError($"Caught error while trying to close map");
+                DynamicMapsPlugin.Log.LogError($"{e.Message}");
+                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
 
                 return true;
             }

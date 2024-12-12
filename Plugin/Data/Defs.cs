@@ -93,9 +93,9 @@ namespace DynamicMaps.Data
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError($"Loading MapMappingDef failed from json at path: {absolutePath}");
-                Plugin.Log.LogError($"Exception given was: {e.Message}");
-                Plugin.Log.LogError($"{e.StackTrace}");
+                DynamicMapsPlugin.Log.LogError($"Loading MapMappingDef failed from json at path: {absolutePath}");
+                DynamicMapsPlugin.Log.LogError($"Exception given was: {e.Message}");
+                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
             }
 
             return null;

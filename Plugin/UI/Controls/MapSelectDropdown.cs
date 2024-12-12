@@ -66,7 +66,7 @@ namespace DynamicMaps.UI.Controls
 
         public void LoadMapDefsFromPath(string relPath)
         {
-            var absolutePath = Path.Combine(Plugin.Path, relPath);
+            var absolutePath = Path.Combine(DynamicMapsPlugin.Path, relPath);
             var paths = Directory.EnumerateFiles(absolutePath, "*.*", SearchOption.AllDirectories)
                 .Where(p => _acceptableExtensions.Contains(Path.GetExtension(p).TrimStart('.').ToLowerInvariant()));
 
@@ -82,11 +82,11 @@ namespace DynamicMaps.UI.Controls
 
                 _writeTimes[path] = writeTime;
 
-                Plugin.Log.LogInfo($"Trying to load MapDef from path: {path}");
+                DynamicMapsPlugin.Log.LogInfo($"Trying to load MapDef from path: {path}");
                 var mapDef = MapDef.LoadFromPath(path);
                 if (mapDef != null)
                 {
-                    Plugin.Log.LogInfo($"Loaded MapDef with display name: {mapDef.DisplayName}");
+                    DynamicMapsPlugin.Log.LogInfo($"Loaded MapDef with display name: {mapDef.DisplayName}");
                     _mapDefs[path] = mapDef;
                 }
             }
@@ -128,7 +128,7 @@ namespace DynamicMaps.UI.Controls
             if (FilteredMapDefs().FirstOrDefault() == null)
             {
                 _nameFilter = "";
-                Plugin.Log.LogWarning($"Cannot filter by {internalMapName}, no MapDefs match that map");
+                DynamicMapsPlugin.Log.LogWarning($"Cannot filter by {internalMapName}, no MapDefs match that map");
             }
 
             ChangeAvailableMapDefs(FilteredMapDefs());

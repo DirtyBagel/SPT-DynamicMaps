@@ -80,7 +80,7 @@ namespace DynamicMaps.Utils
         {
             if (TriggersWithIds == null || QuestItems == null)
             {
-                Plugin.Log.LogWarning($"TriggersWithIds null: {TriggersWithIds == null} or QuestItems null: {QuestItems == null}");
+                DynamicMapsPlugin.Log.LogWarning($"TriggersWithIds null: {TriggersWithIds == null} or QuestItems null: {QuestItems == null}");
                 return null;
             }
 
@@ -254,14 +254,14 @@ namespace DynamicMaps.Utils
             // TODO: Template.Conditions is a GClass reference
             if (quest?.Template?.Conditions == null)
             {
-                Plugin.Log.LogError($"GetIncompleteQuestConditions: quest.Template.Conditions is null, skipping quest");
+                DynamicMapsPlugin.Log.LogError($"GetIncompleteQuestConditions: quest.Template.Conditions is null, skipping quest");
                 yield break;
             }
 
             // TODO: conditions is a GClass reference
             if (!quest.Template.Conditions.TryGetValue(EQuestStatus.AvailableForFinish, out var conditions) || conditions == null)
             {
-                Plugin.Log.LogError($"Quest {quest.Template.NameLocaleKey.BSGLocalized()} doesn't have conditions marked AvailableForFinish, skipping it");
+                DynamicMapsPlugin.Log.LogError($"Quest {quest.Template.NameLocaleKey.BSGLocalized()} doesn't have conditions marked AvailableForFinish, skipping it");
                 yield break;
             }
 
@@ -269,7 +269,7 @@ namespace DynamicMaps.Utils
             {
                 if (condition == null)
                 {
-                    Plugin.Log.LogWarning($"Quest {quest.Template.NameLocaleKey.BSGLocalized()} has null condition, skipping it");
+                    DynamicMapsPlugin.Log.LogWarning($"Quest {quest.Template.NameLocaleKey.BSGLocalized()} has null condition, skipping it");
                     continue;
                 }
 
@@ -288,21 +288,21 @@ namespace DynamicMaps.Utils
             var questController = _playerQuestControllerField.GetValue(player);
             if (questController == null)
             {
-                Plugin.Log.LogError($"Not able to get quests for player: {player.Id}, questController is null");
+                DynamicMapsPlugin.Log.LogError($"Not able to get quests for player: {player.Id}, questController is null");
                 yield break;
             }
 
             var quests = _questControllerQuestsProperty.GetValue(questController);
             if (quests == null)
             {
-                Plugin.Log.LogError($"Not able to get quests for player: {player.Id}, quests is null");
+                DynamicMapsPlugin.Log.LogError($"Not able to get quests for player: {player.Id}, quests is null");
                 yield break;
             }
 
             var questsList = _questsListField.GetValue(quests) as List<QuestDataClass>;
             if (questsList == null)
             {
-                Plugin.Log.LogError($"Not able to get quests for player: {player.Id}, questsList is null");
+                DynamicMapsPlugin.Log.LogError($"Not able to get quests for player: {player.Id}, questsList is null");
                 yield break;
             }
 

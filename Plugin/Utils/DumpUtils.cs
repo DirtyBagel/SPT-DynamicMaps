@@ -84,9 +84,9 @@ namespace DynamicMaps.Utils
 
             var mapName = GameUtils.GetCurrentMapInternalName();
             var dumpString = JsonConvert.SerializeObject(dump, Formatting.Indented);
-            File.WriteAllText(Path.Combine(Plugin.Path, $"{mapName}-extracts.json"), dumpString);
+            File.WriteAllText(Path.Combine(DynamicMapsPlugin.Path, $"{mapName}-extracts.json"), dumpString);
 
-            Plugin.Log.LogInfo("Dumped extracts");
+            DynamicMapsPlugin.Log.LogInfo("Dumped extracts");
         }
 
         public static void DumpSwitches()
@@ -114,9 +114,9 @@ namespace DynamicMaps.Utils
 
             var mapName = GameUtils.GetCurrentMapInternalName();
             var dumpString = JsonConvert.SerializeObject(dump, Formatting.Indented);
-            File.WriteAllText(Path.Combine(Plugin.Path, $"{mapName}-switches.json"), dumpString);
+            File.WriteAllText(Path.Combine(DynamicMapsPlugin.Path, $"{mapName}-switches.json"), dumpString);
 
-            Plugin.Log.LogInfo("Dumped switches");
+            DynamicMapsPlugin.Log.LogInfo("Dumped switches");
         }
 
         public static void DumpLocks()
@@ -147,9 +147,9 @@ namespace DynamicMaps.Utils
 
             var mapName = GameUtils.GetCurrentMapInternalName();
             var dumpString = JsonConvert.SerializeObject(dump, Formatting.Indented);
-            File.WriteAllText(Path.Combine(Plugin.Path, $"{mapName}-locked.json"), dumpString);
+            File.WriteAllText(Path.Combine(DynamicMapsPlugin.Path, $"{mapName}-locked.json"), dumpString);
 
-            Plugin.Log.LogInfo("Dumped locks");
+            DynamicMapsPlugin.Log.LogInfo("Dumped locks");
         }
     }
 }

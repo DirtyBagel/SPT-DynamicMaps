@@ -55,9 +55,9 @@ namespace DynamicMaps.Patches
             }
             catch(Exception e)
             {
-                Plugin.Log.LogError($"Caught error while doing end of raid calculations");
-                Plugin.Log.LogError($"{e.Message}");
-                Plugin.Log.LogError($"{e.StackTrace}");
+                DynamicMapsPlugin.Log.LogError($"Caught error while doing end of raid calculations");
+                DynamicMapsPlugin.Log.LogError($"{e.Message}");
+                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
             }
         }
     }
@@ -116,9 +116,9 @@ namespace DynamicMaps.Patches
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError($"Caught error while running DestroyLoot patch");
-                Plugin.Log.LogError($"{e.Message}");
-                Plugin.Log.LogError($"{e.StackTrace}");
+                DynamicMapsPlugin.Log.LogError($"Caught error while running DestroyLoot patch");
+                DynamicMapsPlugin.Log.LogError($"{e.Message}");
+                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
             }
         }
     }

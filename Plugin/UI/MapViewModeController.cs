@@ -16,22 +16,11 @@ internal class MapViewModeController : MonoBehaviour
     
     private static bool IsMiniMapEnabled => Settings.MiniMapEnabled.Value;
     
-    private bool _isMiniMapHidden;
     private bool _isPeeking;
 
     public EMapViewMode PreviousMapViewMode { get; private set; } = EMapViewMode.None;
     public EMapViewMode CurrentMapViewMode { get; private set; } = EMapViewMode.None;
     
-    internal static MapViewModeController Create(GameObject parent)
-    {
-        var go = UIUtils.CreateUIGameObject(parent, "MapPeek");
-        go.GetRectTransform().sizeDelta = parent.GetRectTransform().sizeDelta;
-
-        var component = go.AddComponent<MapViewModeController>();
-
-        return component;
-    }
-
     private void Awake()
     {
         RectTransform = gameObject.GetRectTransform();
@@ -53,6 +42,8 @@ internal class MapViewModeController : MonoBehaviour
 
             return;
         }
+
+        if (!GameUtils.IsInRaid()) return;
         
         HandleMinimapState();
         HandlePeekState();
@@ -130,17 +121,19 @@ internal class MapViewModeController : MonoBehaviour
     {
        if (CurrentMapViewMode == EMapViewMode.MapScreen) return;
 
-        if (MapScreen.RememberMapPosition)
-        {
-            MapScreen.MapView.SetMapPos(MapScreen.MapView.MainMapPos, 0f);
-        }
-        
-        transform.parent.Find("MapBlock").gameObject.SetActive(false);
-        transform.parent.Find("EmptyBlock").gameObject.SetActive(false);
-        transform.parent.gameObject.SetActive(true);
+       if (MapScreen.RememberMapPosition)
+       { 
+           MapScreen.MapView.SetMapPos(MapScreen.MapView.MainMapPos, 0f);
+       }
+       
+       DynamicMapsPlugin.Log.LogWarning("Showing Map Screen");
+       
+       transform.parent.Find("MapBlock").gameObject.SetActive(false);
+       transform.parent.Find("EmptyBlock").gameObject.SetActive(false);
+       transform.parent.gameObject.SetActive(true);
 
-        CurrentMapViewMode = EMapViewMode.MapScreen;
-        MapScreen.Show(false);
+       CurrentMapViewMode = EMapViewMode.MapScreen;
+       MapScreen.Show(false);
     }
     
     internal void EndMapScreen()
@@ -192,7 +185,7 @@ internal class MapViewModeController : MonoBehaviour
         PreviousMapViewMode = EMapViewMode.Peek;
     }
 
-    internal void BeginMiniMap(bool playAnimation = true)
+    private void BeginMiniMap(bool playAnimation = true)
     {
         if (CurrentMapViewMode == EMapViewMode.MiniMap) return;
         

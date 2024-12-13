@@ -44,7 +44,6 @@ internal class DynamicMapsPlugin : BaseUnityPlugin
 		Instance = this;
 
 		// patches
-		new BattleUIScreenShowPatch().Enable();
 		new CommonUIAwakePatch().Enable();
 		new MapScreenShowPatch().Enable();
 		new MapScreenClosePatch().Enable();
@@ -71,18 +70,5 @@ internal class DynamicMapsPlugin : BaseUnityPlugin
 		// attach to common UI first to call awake and set things up, then attach to sleeping map screen
 		Map = ModdedMapScreen.Create(Singleton<CommonUI>.Instance.gameObject);
 		Map.transform.SetParent(mapScreen.transform);
-	}
-
-	/// <summary>
-	/// Attach the peek component
-	/// </summary>
-	internal void TryAttachToBattleUIScreen(EftBattleUIScreen battleUI)
-	{
-		if (Map is null || GameUtils.GetMainPlayer() is HideoutPlayer)
-		{
-			return;
-		}
-
-		Map.TryAddPeekComponent(battleUI);
 	}
 }

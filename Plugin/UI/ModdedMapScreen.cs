@@ -17,6 +17,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DynamicMaps.ExternalModSupport.SamSWATHeliCrash;
 using EFT;
+using EFT.UI.Map;
 
 namespace DynamicMaps.UI;
 
@@ -46,7 +47,7 @@ internal class ModdedMapScreen : MonoBehaviour
 
 	private RectTransform RectTransform => gameObject.GetRectTransform();
 	private RectTransform ParentTransform => gameObject.transform.parent as RectTransform;
-
+	
 	private bool _isShown = false;
 
 	// map and transport mechanism
@@ -153,6 +154,10 @@ internal class ModdedMapScreen : MonoBehaviour
 		_playerPositionText.RectTransform.anchorMax = TextAnchor;
 		_playerPositionText.gameObject.SetActive(false);
 
+		ViewModeController = gameObject.GetOrAddComponent<MapViewModeController>();
+		ViewModeController.MapScreen = this;
+		ViewModeController.MapScreenTrueParent = ParentTransform;
+		
 		// read config before setting up marker providers
 		ReadConfig();
 
@@ -304,8 +309,6 @@ internal class ModdedMapScreen : MonoBehaviour
 
 	private void OnRaidEnd()
 	{
-		if (!BattleUIScreenShowPatch.IsAttached) return;
-
 		foreach (var dynamicProvider in _dynamicMarkerProviders.Values)
 		{
 			try
@@ -852,24 +855,7 @@ internal class ModdedMapScreen : MonoBehaviour
 			AddRemoveMarkerProvider<HeliCrashMarkerProvider>(Settings.ShowHeliCrashMarker.Value);
 		}
 	}
-
-	internal void TryAddPeekComponent(EftBattleUIScreen battleUI)
-	{
-		// Peek component already instantiated, return
-		if (ViewModeController is not null)
-		{
-			return;
-		}
-
-		DynamicMapsPlugin.Log.LogInfo("Trying to attach peek component to BattleUI");
-
-		ViewModeController = MapViewModeController.Create(battleUI.gameObject);
-		ViewModeController.MapScreen = this;
-		ViewModeController.MapScreenTrueParent = ParentTransform;
-
-		ReadConfig();
-	}
-
+	
 	public void AddRemoveMarkerProvider<T>(bool status) where T : IDynamicMarkerProvider, new()
 	{
 		if (status && !_dynamicMarkerProviders.ContainsKey(typeof(T)))

@@ -7,21 +7,20 @@ using EFT.UI;
 using EFT.UI.Map;
 using HarmonyLib;
 
-namespace DynamicMaps.Patches
-{
-    internal class CommonUIAwakePatch : ModulePatch
-    {
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(CommonUI), nameof(CommonUI.Awake));
-        }
+namespace DynamicMaps.Patches;
 
-        [PatchPostfix]
-        public static void PatchPostfix(CommonUI __instance)
-        {
-            var mapScreen = Traverse.Create(__instance.InventoryScreen).Field("_mapScreen").GetValue<MapScreen>();
+internal class CommonUIAwakePatch : ModulePatch
+{
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(CommonUI), nameof(CommonUI.Awake));
+	}
+
+	[PatchPostfix]
+	public static void PatchPostfix(CommonUI __instance)
+	{
+		var mapScreen = Traverse.Create(__instance.InventoryScreen).Field("_mapScreen").GetValue<MapScreen>();
             
-            DynamicMapsPlugin.Instance.TryAttachToMapScreen(mapScreen);
-        }
-    }
+		DynamicMapsPlugin.Instance.TryAttachToMapScreen(mapScreen);
+	}
 }

@@ -7,119 +7,118 @@ using EFT;
 using EFT.Interactive;
 using HarmonyLib;
 
-namespace DynamicMaps.Patches
+namespace DynamicMaps.Patches;
+
+internal class GameStartedPatch : ModulePatch
 {
-    internal class GameStartedPatch : ModulePatch
-    {
-        public static List<LootableContainer> HiddenStashes { get; } = [];
-        
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnGameStarted));
-        }
+	public static List<LootableContainer> HiddenStashes { get; } = [];
 
-        [PatchPostfix]
-        public static void PatchPostfix(GameWorld __instance)
-        {
-            // Credit to RaiRai for finding the hidden stash names
-            var caches = LocationScene.GetAllObjects<LootableContainer>()
-                .Where( x => 
-                    x.name.StartsWith("scontainer_wood_CAP")  || 
-                    x.name.StartsWith("scontainer_Blue_Barrel_Base_Cap"))
-                .ToList();
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnGameStarted));
+	}
+
+	[PatchPostfix]
+	public static void PatchPostfix(GameWorld __instance)
+	{
+		// Credit to RaiRai for finding the hidden stash names
+		var caches = LocationScene.GetAllObjects<LootableContainer>()
+			.Where(x =>
+				x.name.StartsWith("scontainer_wood_CAP") ||
+				x.name.StartsWith("scontainer_Blue_Barrel_Base_Cap"))
+			.ToList();
 
 
-            foreach (var cache in caches)
-            {
-                HiddenStashes.Add(cache);
-            }
-        }
-    }
-    
-    internal class GameWorldOnDestroyPatch : ModulePatch
-    {
-        internal static event Action OnRaidEnd;
+		foreach (var cache in caches)
+		{
+			HiddenStashes.Add(cache);
+		}
+	}
+}
 
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnDestroy));
-        }
+internal class GameWorldOnDestroyPatch : ModulePatch
+{
+	internal static event Action OnRaidEnd;
 
-        [PatchPrefix]
-        public static void PatchPrefix()
-        {
-            try
-            {
-                OnRaidEnd?.Invoke();
-                GameStartedPatch.HiddenStashes.Clear();
-            }
-            catch(Exception e)
-            {
-                DynamicMapsPlugin.Log.LogError($"Caught error while doing end of raid calculations");
-                DynamicMapsPlugin.Log.LogError($"{e.Message}");
-                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
-            }
-        }
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.OnDestroy));
+	}
 
-    internal class GameWorldUnregisterPlayerPatch : ModulePatch
-    {
-        internal static event Action<IPlayer> OnUnregisterPlayer;
+	[PatchPrefix]
+	public static void PatchPrefix()
+	{
+		try
+		{
+			OnRaidEnd?.Invoke();
+			GameStartedPatch.HiddenStashes.Clear();
+		}
+		catch (Exception e)
+		{
+			DynamicMapsPlugin.Log.LogError($"Caught error while doing end of raid calculations");
+			DynamicMapsPlugin.Log.LogError($"{e.Message}");
+			DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
+		}
+	}
+}
 
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.UnregisterPlayer));
-        }
+internal class GameWorldUnregisterPlayerPatch : ModulePatch
+{
+	internal static event Action<IPlayer> OnUnregisterPlayer;
 
-        [PatchPostfix]
-        public static void PatchPostfix(IPlayer iPlayer)
-        {
-            OnUnregisterPlayer?.Invoke(iPlayer);
-        }
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(GameWorld), nameof(GameWorld.UnregisterPlayer));
+	}
 
-    internal class GameWorldRegisterLootItemPatch : ModulePatch
-    {
-        internal static event Action<LootItem> OnRegisterLoot;
+	[PatchPostfix]
+	public static void PatchPostfix(IPlayer iPlayer)
+	{
+		OnUnregisterPlayer?.Invoke(iPlayer);
+	}
+}
 
-        protected override MethodBase GetTargetMethod()
-        {
-            return typeof(GameWorld).GetMethod("RegisterLoot").MakeGenericMethod(typeof(LootItem));
-        }
+internal class GameWorldRegisterLootItemPatch : ModulePatch
+{
+	internal static event Action<LootItem> OnRegisterLoot;
 
-        [PatchPostfix]
-        public static void PatchPostfix(LootItem loot)
-        {
-            OnRegisterLoot?.Invoke(loot);
-        }
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return typeof(GameWorld).GetMethod("RegisterLoot").MakeGenericMethod(typeof(LootItem));
+	}
 
-    internal class GameWorldDestroyLootPatch : ModulePatch
-    {
-        internal static event Action<LootItem> OnDestroyLoot;
+	[PatchPostfix]
+	public static void PatchPostfix(LootItem loot)
+	{
+		OnRegisterLoot?.Invoke(loot);
+	}
+}
 
-        protected override MethodBase GetTargetMethod()
-        {
-            return typeof(GameWorld).GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .First(m => m.Name == "DestroyLoot" && m.GetParameters().FirstOrDefault(p => p.Name == "loot") != null);
-        }
+internal class GameWorldDestroyLootPatch : ModulePatch
+{
+	internal static event Action<LootItem> OnDestroyLoot;
 
-        [PatchPrefix]
-        public static void PatchPrefix(Object loot)
-        {
-            try
-            {
-                if (loot is LootItem lootItem)
-                {
-                    OnDestroyLoot?.Invoke(lootItem);
-                }
-            }
-            catch (Exception e)
-            {
-                DynamicMapsPlugin.Log.LogError($"Caught error while running DestroyLoot patch");
-                DynamicMapsPlugin.Log.LogError($"{e.Message}");
-                DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
-            }
-        }
-    }
+	protected override MethodBase GetTargetMethod()
+	{
+		return typeof(GameWorld).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+			.First(m => m.Name == "DestroyLoot" && m.GetParameters().FirstOrDefault(p => p.Name == "loot") != null);
+	}
+
+	[PatchPrefix]
+	public static void PatchPrefix(Object loot)
+	{
+		try
+		{
+			if (loot is LootItem lootItem)
+			{
+				OnDestroyLoot?.Invoke(lootItem);
+			}
+		}
+		catch (Exception e)
+		{
+			DynamicMapsPlugin.Log.LogError($"Caught error while running DestroyLoot patch");
+			DynamicMapsPlugin.Log.LogError($"{e.Message}");
+			DynamicMapsPlugin.Log.LogError($"{e.StackTrace}");
+		}
+	}
 }

@@ -7,315 +7,326 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace DynamicMaps.UI.Components
+namespace DynamicMaps.UI.Components;
+
+public class MapMarker : MonoBehaviour, ILayerBound, IPointerEnterHandler, IPointerExitHandler
 {
-    public class MapMarker : MonoBehaviour, ILayerBound, IPointerEnterHandler, IPointerExitHandler
-    {
-        // TODO: this seems... not great?
-        public static Dictionary<string, Dictionary<LayerStatus, float>> CategoryImageAlphaLayerStatus { get; protected set; }
-            = new Dictionary<string, Dictionary<LayerStatus, float>>
-            {
-                {"Extract", new Dictionary<LayerStatus, float> {
-                    {LayerStatus.Hidden, 0.50f},
-                    {LayerStatus.Underneath, 0.75f},
-                    {LayerStatus.OnTop, 1.0f},
-                    {LayerStatus.FullReveal, 1.0f},
-                }},
-                {"Quest", new Dictionary<LayerStatus, float> {
-                    {LayerStatus.Hidden, 0.50f},
-                    {LayerStatus.Underneath, 0.75f},
-                    {LayerStatus.OnTop, 1.0f},
-                    {LayerStatus.FullReveal, 1.0f},
-                }},
-            };
-        public static Dictionary<string, Dictionary<LayerStatus, float>> CategoryLabelAlphaLayerStatus { get; protected set; }
-            = new Dictionary<string, Dictionary<LayerStatus, float>>
-            {
-                {"Extract", new Dictionary<LayerStatus, float> {
-                    {LayerStatus.Hidden, 0.0f},
-                    {LayerStatus.Underneath, 0.0f},
-                    {LayerStatus.OnTop, 1.0f},
-                    {LayerStatus.FullReveal, 1.0f},
-                }},
-                {"Quest", new Dictionary<LayerStatus, float> {
-                    {LayerStatus.Hidden, 0.0f},
-                    {LayerStatus.Underneath, 0.0f},
-                    {LayerStatus.OnTop, 1.0f},
-                    {LayerStatus.FullReveal, 1.0f},
-                }},
-            };
+	// TODO: this seems... not great?
+	public static Dictionary<string, Dictionary<LayerStatus, float>> CategoryImageAlphaLayerStatus
+	{
+		get;
+		protected set;
+	}
+		= new Dictionary<string, Dictionary<LayerStatus, float>>
+		{
+			{
+				"Extract", new Dictionary<LayerStatus, float>
+				{
+					{ LayerStatus.Hidden, 0.50f },
+					{ LayerStatus.Underneath, 0.75f },
+					{ LayerStatus.OnTop, 1.0f },
+					{ LayerStatus.FullReveal, 1.0f },
+				}
+			},
+			{
+				"Quest", new Dictionary<LayerStatus, float>
+				{
+					{ LayerStatus.Hidden, 0.50f },
+					{ LayerStatus.Underneath, 0.75f },
+					{ LayerStatus.OnTop, 1.0f },
+					{ LayerStatus.FullReveal, 1.0f },
+				}
+			},
+		};
 
-        private static Vector2 _labelSizeMultiplier = new Vector2(2.5f, 2f);
-        private static float _markerMinFontSize = 9f;
-        private static float _markerMaxFontSize = 13f;
+	public static Dictionary<string, Dictionary<LayerStatus, float>> CategoryLabelAlphaLayerStatus
+	{
+		get;
+		protected set;
+	}
+		= new Dictionary<string, Dictionary<LayerStatus, float>>
+		{
+			{
+				"Extract", new Dictionary<LayerStatus, float>
+				{
+					{ LayerStatus.Hidden, 0.0f },
+					{ LayerStatus.Underneath, 0.0f },
+					{ LayerStatus.OnTop, 1.0f },
+					{ LayerStatus.FullReveal, 1.0f },
+				}
+			},
+			{
+				"Quest", new Dictionary<LayerStatus, float>
+				{
+					{ LayerStatus.Hidden, 0.0f },
+					{ LayerStatus.Underneath, 0.0f },
+					{ LayerStatus.OnTop, 1.0f },
+					{ LayerStatus.FullReveal, 1.0f },
+				}
+			},
+		};
 
-        public event Action<ILayerBound> OnPositionChanged;
+	private static Vector2 _labelSizeMultiplier = new Vector2(2.5f, 2f);
+	private static float _markerMinFontSize = 9f;
+	private static float _markerMaxFontSize = 13f;
 
-        public string Text { get; protected set; }
-        public string Category { get; protected set; }
-        public MapView ContainingMapView { get; set; }
+	public event Action<ILayerBound> OnPositionChanged;
 
-        public Image Image { get; protected set; }
-        public TextMeshProUGUI Label { get; protected set; }
-        public RectTransform RectTransform => gameObject.transform as RectTransform;
+	public string Text { get; protected set; }
+	public string Category { get; protected set; }
+	public MapView ContainingMapView { get; set; }
 
-        public string AssociatedItemId { get; protected set; } = "";
-        public bool IsDynamic { get; protected set; } = false;
-        public bool ShowInRaid { get; protected set; } = true;
+	public Image Image { get; protected set; }
+	public TextMeshProUGUI Label { get; protected set; }
+	public RectTransform RectTransform => gameObject.transform as RectTransform;
 
-        private Vector3 _position;
-        public Vector3 Position
-        {
-            get
-            {
-                return _position;
-            }
+	public string AssociatedItemId { get; protected set; } = "";
+	public bool IsDynamic { get; protected set; } = false;
+	public bool ShowInRaid { get; protected set; } = true;
 
-            set
-            {
-                Move(value);
-            }
-        }
+	private Vector3 _position;
 
-        private float _rotation = 0f;
-        public float Rotation
-        {
-            get
-            {
-                return _rotation;
-            }
+	public Vector3 Position
+	{
+		get { return _position; }
 
-            set
-            {
-                SetRotation(value);
-            }
-        }
+		set { Move(value); }
+	}
 
-        private Color _color = Color.white;
-        public Color Color
-        {
-            get
-            {
-                return _color;
-            }
+	private float _rotation = 0f;
 
-            set
-            {
-                _color = value;
-                Image.color = value;
-                Label.color = value;
-            }
-        }
+	public float Rotation
+	{
+		get { return _rotation; }
 
-        private Vector2 _size = new Vector2(30f, 30f);
-        public Vector2 Size
-        {
-            get
-            {
-                return _size;
-            }
+		set { SetRotation(value); }
+	}
 
-            set
-            {
-                _size = value;
-                RectTransform.sizeDelta = _size;
-                Image.GetRectTransform().sizeDelta = _size;
-                Label.GetRectTransform().sizeDelta = _size * _labelSizeMultiplier;
-            }
-        }
+	private Color _color = Color.white;
 
-        public Dictionary<LayerStatus, float> ImageAlphaLayerStatus { get; protected set; } = new Dictionary<LayerStatus, float>
-            {
-                {LayerStatus.Hidden, 0.0f},
-                {LayerStatus.Underneath, 0.0f},
-                {LayerStatus.OnTop, 1f},
-                {LayerStatus.FullReveal, 1f},
-            };
-        public Dictionary<LayerStatus, float> LabelAlphaLayerStatus { get; protected set; } = new Dictionary<LayerStatus, float>
-            {
-                {LayerStatus.Hidden, 0.0f},
-                {LayerStatus.Underneath, 0.0f},
-                {LayerStatus.OnTop, 0.0f},
-                {LayerStatus.FullReveal, 1f},
-            };
+	public Color Color
+	{
+		get { return _color; }
 
-        private float _initialRotation;
-        private bool _hasSetOutline = false;
-        private bool _isInFullReveal = false;
+		set
+		{
+			_color = value;
+			Image.color = value;
+			Label.color = value;
+		}
+	}
 
-        public static MapMarker Create(GameObject parent, MapMarkerDef def, Vector2 size, float degreesRotation, float scale)
-        {
-            var mapMarker = Create<MapMarker>(parent, def.Text, def.Category, def.ImagePath, def.Color, def.Position, size,
-                                              def.Pivot, degreesRotation, scale, def.ShowInRaid, def.Sprite);
-            mapMarker.AssociatedItemId = def.AssociatedItemId;
+	private Vector2 _size = new Vector2(30f, 30f);
 
-            return mapMarker;
-        }
+	public Vector2 Size
+	{
+		get { return _size; }
 
-        public static T Create<T>(GameObject parent, string text, string category, string imageRelativePath, Color color,
-                                  Vector3 position, Vector2 size, Vector2 pivot, float degreesRotation, float scale,
-                                  bool showInRaid = true, Sprite sprite = null)
-                            where T : MapMarker
-        {
-            var go = UIUtils.CreateUIGameObject(parent, $"MapMarker {text}");
+		set
+		{
+			_size = value;
+			RectTransform.sizeDelta = _size;
+			Image.GetRectTransform().sizeDelta = _size;
+			Label.GetRectTransform().sizeDelta = _size * _labelSizeMultiplier;
+		}
+	}
 
-            // this is to receive mouse events
-            var fakeImage = go.AddComponent<Image>();
-            fakeImage.color = Color.clear;
-            fakeImage.raycastTarget = true;
+	public Dictionary<LayerStatus, float> ImageAlphaLayerStatus { get; protected set; } =
+		new Dictionary<LayerStatus, float>
+		{
+			{ LayerStatus.Hidden, 0.0f },
+			{ LayerStatus.Underneath, 0.0f },
+			{ LayerStatus.OnTop, 1f },
+			{ LayerStatus.FullReveal, 1f },
+		};
 
-            var rectTransform = go.GetRectTransform();
-            rectTransform.anchoredPosition = position;
-            rectTransform.sizeDelta = size;
-            rectTransform.localScale = scale * Vector2.one;
-            rectTransform.localRotation = Quaternion.Euler(0, 0, degreesRotation);
-            rectTransform.pivot = pivot;
+	public Dictionary<LayerStatus, float> LabelAlphaLayerStatus { get; protected set; } =
+		new Dictionary<LayerStatus, float>
+		{
+			{ LayerStatus.Hidden, 0.0f },
+			{ LayerStatus.Underneath, 0.0f },
+			{ LayerStatus.OnTop, 0.0f },
+			{ LayerStatus.FullReveal, 1f },
+		};
 
-            var marker = go.AddComponent<T>();
-            marker.Text = text;
-            marker.Category = category;
-            marker.Position = position;
-            marker._initialRotation = degreesRotation;
-            marker.ShowInRaid = showInRaid;
+	private float _initialRotation;
+	private bool _hasSetOutline = false;
+	private bool _isInFullReveal = false;
 
-            // image
-            var imageGO = UIUtils.CreateUIGameObject(go, "image");
-            imageGO.AddComponent<CanvasRenderer>();
-            imageGO.GetRectTransform().sizeDelta = size;
-            imageGO.GetRectTransform().pivot = new Vector2(0.5f, 0.5f);
-            marker.Image = imageGO.AddComponent<Image>();
-            marker.Image.raycastTarget = false;
-            marker.Image.sprite = sprite is null 
-                ? TextureUtils.GetOrLoadCachedSprite(imageRelativePath)
-                : sprite;
-            marker.Image.type = Image.Type.Simple;
+	public static MapMarker Create(GameObject parent, MapMarkerDef def, Vector2 size, float degreesRotation,
+		float scale)
+	{
+		var mapMarker = Create<MapMarker>(parent, def.Text, def.Category, def.ImagePath, def.Color, def.Position, size,
+			def.Pivot, degreesRotation, scale, def.ShowInRaid, def.Sprite);
+		mapMarker.AssociatedItemId = def.AssociatedItemId;
 
-            // var outline = imageGO.AddComponent<Outline>();
-            // outline.effectColor = Color.black;
-            // outline.effectDistance = Vector2.one;
+		return mapMarker;
+	}
 
-            // label
-            var labelGO = UIUtils.CreateUIGameObject(go, "label");
-            labelGO.AddComponent<CanvasRenderer>();
-            labelGO.GetRectTransform().anchorMin = new Vector2(0.5f, 0f);
-            labelGO.GetRectTransform().anchorMax = new Vector2(0.5f, 0f);
-            labelGO.GetRectTransform().pivot = new Vector2(0.5f, 1f);
-            labelGO.GetRectTransform().sizeDelta = size * _labelSizeMultiplier;
-            marker.Label = labelGO.AddComponent<TextMeshProUGUI>();
-            marker.Label.alignment = TextAlignmentOptions.Top;
-            marker.Label.enableWordWrapping = true;
-            marker.Label.enableAutoSizing = true;
-            marker.Label.fontSizeMin = _markerMinFontSize;
-            marker.Label.fontSizeMax = _markerMaxFontSize;
-            marker.Label.text = marker.Text;
+	public static T Create<T>(GameObject parent, string text, string category, string imageRelativePath, Color color,
+		Vector3 position, Vector2 size, Vector2 pivot, float degreesRotation, float scale,
+		bool showInRaid = true, Sprite sprite = null)
+		where T : MapMarker
+	{
+		var go = UIUtils.CreateUIGameObject(parent, $"MapMarker {text}");
 
-            marker._hasSetOutline = UIUtils.TrySetTMPOutline(marker.Label);
+		// this is to receive mouse events
+		var fakeImage = go.AddComponent<Image>();
+		fakeImage.color = Color.clear;
+		fakeImage.raycastTarget = true;
 
-            marker.Color = color;
-            marker._size = size;
+		var rectTransform = go.GetRectTransform();
+		rectTransform.anchoredPosition = position;
+		rectTransform.sizeDelta = size;
+		rectTransform.localScale = scale * Vector2.one;
+		rectTransform.localRotation = Quaternion.Euler(0, 0, degreesRotation);
+		rectTransform.pivot = pivot;
 
-            marker.Label.gameObject.SetActive(false);
+		var marker = go.AddComponent<T>();
+		marker.Text = text;
+		marker.Category = category;
+		marker.Position = position;
+		marker._initialRotation = degreesRotation;
+		marker.ShowInRaid = showInRaid;
 
-            return marker;
-        }
+		// image
+		var imageGO = UIUtils.CreateUIGameObject(go, "image");
+		imageGO.AddComponent<CanvasRenderer>();
+		imageGO.GetRectTransform().sizeDelta = size;
+		imageGO.GetRectTransform().pivot = new Vector2(0.5f, 0.5f);
+		marker.Image = imageGO.AddComponent<Image>();
+		marker.Image.raycastTarget = false;
+		marker.Image.sprite = sprite is null
+			? TextureUtils.GetOrLoadCachedSprite(imageRelativePath)
+			: sprite;
+		marker.Image.type = Image.Type.Simple;
 
-        protected virtual void OnEnable()
-        {
-            TrySetOutlineAndResize();
-        }
+		// var outline = imageGO.AddComponent<Outline>();
+		// outline.effectColor = Color.black;
+		// outline.effectDistance = Vector2.one;
 
-        protected virtual void OnDestroy()
-        {
-            OnPositionChanged = null;
-        }
+		// label
+		var labelGO = UIUtils.CreateUIGameObject(go, "label");
+		labelGO.AddComponent<CanvasRenderer>();
+		labelGO.GetRectTransform().anchorMin = new Vector2(0.5f, 0f);
+		labelGO.GetRectTransform().anchorMax = new Vector2(0.5f, 0f);
+		labelGO.GetRectTransform().pivot = new Vector2(0.5f, 1f);
+		labelGO.GetRectTransform().sizeDelta = size * _labelSizeMultiplier;
+		marker.Label = labelGO.AddComponent<TextMeshProUGUI>();
+		marker.Label.alignment = TextAlignmentOptions.Top;
+		marker.Label.enableWordWrapping = true;
+		marker.Label.enableAutoSizing = true;
+		marker.Label.fontSizeMin = _markerMinFontSize;
+		marker.Label.fontSizeMax = _markerMaxFontSize;
+		marker.Label.text = marker.Text;
 
-        public void Move(Vector3 newPosition, bool callback = true)
-        {
-            RectTransform.anchoredPosition = newPosition; // vector3 to vector2 discards z
-            _position = newPosition;
+		marker._hasSetOutline = UIUtils.TrySetTMPOutline(marker.Label);
 
-            if (callback)
-            {
-                OnPositionChanged?.Invoke(this);
-            }
-        }
+		marker.Color = color;
+		marker._size = size;
 
-        public void SetRotation(float degreesRotation)
-        {
-            _rotation = degreesRotation;
-            Image.gameObject.GetRectTransform().localRotation = Quaternion.Euler(0, 0, degreesRotation - _initialRotation);
-        }
+		marker.Label.gameObject.SetActive(false);
 
-        public void MoveAndRotate(Vector3 newPosition, float rotation, bool callback = true)
-        {
-            Move(newPosition, callback);
-            SetRotation(rotation);
-        }
+		return marker;
+	}
 
-        public void HandleNewLayerStatus(LayerStatus status)
-        {
-            if (!ShowInRaid && GameUtils.IsInRaid())
-            {
-                gameObject.SetActive(false);
-                return;
-            }
+	protected virtual void OnEnable()
+	{
+		TrySetOutlineAndResize();
+	}
 
-            if (_isInFullReveal)
-            {
-                status = LayerStatus.FullReveal;
-            }
+	protected virtual void OnDestroy()
+	{
+		OnPositionChanged = null;
+	}
 
-            var imageAlpha = ImageAlphaLayerStatus[status];
-            var labelAlpha = LabelAlphaLayerStatus[status];
+	public void Move(Vector3 newPosition, bool callback = true)
+	{
+		RectTransform.anchoredPosition = newPosition; // vector3 to vector2 discards z
+		_position = newPosition;
 
-            if (CategoryImageAlphaLayerStatus.ContainsKey(Category))
-            {
-                imageAlpha = CategoryImageAlphaLayerStatus[Category][status];
-            }
-            if (CategoryLabelAlphaLayerStatus.ContainsKey(Category))
-            {
-                labelAlpha = CategoryLabelAlphaLayerStatus[Category][status];
-            }
+		if (callback)
+		{
+			OnPositionChanged?.Invoke(this);
+		}
+	}
 
-            Image.color = new Color(Image.color.r, Image.color.g, Image.color.b, imageAlpha);
-            Label.color = new Color(Label.color.r, Label.color.g, Label.color.b, labelAlpha);
+	public void SetRotation(float degreesRotation)
+	{
+		_rotation = degreesRotation;
+		Image.gameObject.GetRectTransform().localRotation = Quaternion.Euler(0, 0, degreesRotation - _initialRotation);
+	}
 
-            Image.gameObject.SetActive(imageAlpha > 0f);
-            Label.gameObject.SetActive(labelAlpha > 0f);
-            gameObject.SetActive(labelAlpha > 0f || imageAlpha > 0f);
-        }
+	public void MoveAndRotate(Vector3 newPosition, float rotation, bool callback = true)
+	{
+		Move(newPosition, callback);
+		SetRotation(rotation);
+	}
 
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            TrySetOutlineAndResize();
+	public void HandleNewLayerStatus(LayerStatus status)
+	{
+		if (!ShowInRaid && GameUtils.IsInRaid())
+		{
+			gameObject.SetActive(false);
+			return;
+		}
 
-            _isInFullReveal = true;
-            transform.SetAsLastSibling();
-            HandleNewLayerStatus(LayerStatus.FullReveal);
-        }
+		if (_isInFullReveal)
+		{
+			status = LayerStatus.FullReveal;
+		}
 
-        public void OnPointerExit(PointerEventData eventData)
-        {
-            _isInFullReveal = false;
-            OnPositionChanged?.Invoke(this);
-        }
+		var imageAlpha = ImageAlphaLayerStatus[status];
+		var labelAlpha = LabelAlphaLayerStatus[status];
 
-        private void TrySetOutlineAndResize()
-        {
-            if (_hasSetOutline || Label == null)
-            {
-                return;
-            }
+		if (CategoryImageAlphaLayerStatus.ContainsKey(Category))
+		{
+			imageAlpha = CategoryImageAlphaLayerStatus[Category][status];
+		}
 
-            // try resetting text, since it seems like if outline fails, it doesn't size properly
-            Label.enableAutoSizing = true;
-            Label.enableWordWrapping = true;
-            Label.fontSizeMin = _markerMinFontSize;
-            Label.fontSizeMax = _markerMaxFontSize;
-            Label.alignment = TextAlignmentOptions.Top;
-            Label.text = $"{Label.text}";
+		if (CategoryLabelAlphaLayerStatus.ContainsKey(Category))
+		{
+			labelAlpha = CategoryLabelAlphaLayerStatus[Category][status];
+		}
 
-            _hasSetOutline = UIUtils.TrySetTMPOutline(Label);
-        }
-    }
+		Image.color = new Color(Image.color.r, Image.color.g, Image.color.b, imageAlpha);
+		Label.color = new Color(Label.color.r, Label.color.g, Label.color.b, labelAlpha);
+
+		Image.gameObject.SetActive(imageAlpha > 0f);
+		Label.gameObject.SetActive(labelAlpha > 0f);
+		gameObject.SetActive(labelAlpha > 0f || imageAlpha > 0f);
+	}
+
+	public void OnPointerEnter(PointerEventData eventData)
+	{
+		TrySetOutlineAndResize();
+
+		_isInFullReveal = true;
+		transform.SetAsLastSibling();
+		HandleNewLayerStatus(LayerStatus.FullReveal);
+	}
+
+	public void OnPointerExit(PointerEventData eventData)
+	{
+		_isInFullReveal = false;
+		OnPositionChanged?.Invoke(this);
+	}
+
+	private void TrySetOutlineAndResize()
+	{
+		if (_hasSetOutline || Label == null)
+		{
+			return;
+		}
+
+		// try resetting text, since it seems like if outline fails, it doesn't size properly
+		Label.enableAutoSizing = true;
+		Label.enableWordWrapping = true;
+		Label.fontSizeMin = _markerMinFontSize;
+		Label.fontSizeMax = _markerMaxFontSize;
+		Label.alignment = TextAlignmentOptions.Top;
+		Label.text = $"{Label.text}";
+
+		_hasSetOutline = UIUtils.TrySetTMPOutline(Label);
+	}
 }

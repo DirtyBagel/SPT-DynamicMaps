@@ -9,26 +9,25 @@ using EFT;
 using EFT.UI;
 using HarmonyLib;
 
-namespace DynamicMaps.Patches
-{
-    internal class BattleUIScreenShowPatch : ModulePatch
-    {
-        public static bool IsAttached = false;
-        
-        protected override MethodBase GetTargetMethod()
-        {
-            return AccessTools.Method(typeof(EftBattleUIScreen),
-                                      nameof(EftBattleUIScreen.Show),
-                                      new Type[] { typeof(GamePlayerOwner) });
-        }
+namespace DynamicMaps.Patches;
 
-        [PatchPostfix]
-        public static void PatchPostfix(EftBattleUIScreen __instance)
-        {
-            IsAttached = GameUtils.ShouldShowMapInRaid();
-            if (!IsAttached) return;
+internal class BattleUIScreenShowPatch : ModulePatch
+{
+	public static bool IsAttached = false;
+        
+	protected override MethodBase GetTargetMethod()
+	{
+		return AccessTools.Method(typeof(EftBattleUIScreen),
+			nameof(EftBattleUIScreen.Show),
+			new Type[] { typeof(GamePlayerOwner) });
+	}
+
+	[PatchPostfix]
+	public static void PatchPostfix(EftBattleUIScreen __instance)
+	{
+		IsAttached = GameUtils.ShouldShowMapInRaid();
+		if (!IsAttached) return;
             
-            DynamicMapsPlugin.Instance.TryAttachToBattleUIScreen(__instance);
-        }
-    }
+		DynamicMapsPlugin.Instance.TryAttachToBattleUIScreen(__instance);
+	}
 }

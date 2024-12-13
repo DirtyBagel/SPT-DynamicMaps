@@ -6,98 +6,97 @@ using DynamicMaps.DynamicMarkers;
 using UnityEngine;
 using Comfort.Common;
 using EFT;
-using DynamicMaps.Config;
 
-namespace DynamicMaps.ExternalModSupport.SamSWATHeliCrash
+namespace DynamicMaps.ExternalModSupport.SamSWATHeliCrash;
+
+public class HeliCrashMarkerProvider : IDynamicMarkerProvider
 {
-    public class HeliCrashMarkerProvider : IDynamicMarkerProvider
-    {
-        private MapView _lastMapView;
-        private List<MapMarker> _HeliCrashMarkers = new List<MapMarker>();
+	private MapView _lastMapView;
+	private List<MapMarker> _HeliCrashMarkers = new List<MapMarker>();
 
-        // TODO: move to config
-        private const string _markerName = "Crashed Helicopter";
-        private const string _markerCategory = "Airdrop";
-        private const string _markerImagePath = "Markers/helicopter.png";
-        private static Vector2 _markerPivot = new Vector2(0.5f, 0.25f);
-        private static Color _markerColor = Color.Lerp(Color.red, Color.white, 0.333f);
-        //
+	// TODO: move to config
+	private const string _markerName = "Crashed Helicopter";
+	private const string _markerCategory = "Airdrop";
+	private const string _markerImagePath = "Markers/helicopter.png";
+	private static Vector2 _markerPivot = new Vector2(0.5f, 0.25f);
+	private static Color _markerColor = Color.Lerp(Color.red, Color.white, 0.333f);
+	//
 
-        public void OnShowInRaid(MapView map)
-        {
-            _lastMapView = map;
-            // There should be only 1 crashed Heli on the Map. Therefore stop refreshing and adding markers when 1 is allready on the map
-            if (_HeliCrashMarkers.Count > 0)
-            {
-                return;
-            }
-            TryAddMarker();
-            
-        }
+	public void OnShowInRaid(MapView map)
+	{
+		_lastMapView = map;
+		// There should be only 1 crashed Heli on the Map. Therefore stop refreshing and adding markers when 1 is allready on the map
+		if (_HeliCrashMarkers.Count > 0)
+		{
+			return;
+		}
 
-        public void OnHideInRaid(MapView map)
-        {
-            // Do Nothing
-        }
+		TryAddMarker();
+	}
 
-        public void OnRaidEnd(MapView map)
-        {
-            TryRemoveMarker();
-        }
+	public void OnHideInRaid(MapView map)
+	{
+		// Do Nothing
+	}
 
-        public void OnMapChanged(MapView map, MapDef mapDef)
-        {
-            // Do Nothing
-        }
+	public void OnRaidEnd(MapView map)
+	{
+		TryRemoveMarker();
+	}
 
-        public void OnDisable(MapView map)
-        {
-            OnRaidEnd(map);
-        }
+	public void OnMapChanged(MapView map, MapDef mapDef)
+	{
+		// Do Nothing
+	}
 
-        private void TryAddMarker()
-        {
-            var gameWorld = Singleton<GameWorld>.Instance;
-            var HeliCrashWorldItem = gameWorld.FindItemWithWorldData("6223349b3136504a544d1608");
-            var (itemData, WorldData) = HeliCrashWorldItem.Value;
+	public void OnDisable(MapView map)
+	{
+		OnRaidEnd(map);
+	}
 
-            if (itemData == null){
-                return;
-            }
+	private void TryAddMarker()
+	{
+		var gameWorld = Singleton<GameWorld>.Instance;
+		var HeliCrashWorldItem = gameWorld.FindItemWithWorldData("6223349b3136504a544d1608");
+		var (itemData, WorldData) = HeliCrashWorldItem.Value;
 
-            var markerDef = new MapMarkerDef
-            {
-                Category = _markerCategory,
-                Color = _markerColor,
-                ImagePath = _markerImagePath,
-                Position = MathUtils.ConvertToMapPosition(WorldData.Transform),
-                Pivot = _markerPivot,
-                Text = _markerName
-            };
+		if (itemData == null)
+		{
+			return;
+		}
 
-            var marker = _lastMapView.AddMapMarker(markerDef);
-            _HeliCrashMarkers.Add(marker);
-        }
+		var markerDef = new MapMarkerDef
+		{
+			Category = _markerCategory,
+			Color = _markerColor,
+			ImagePath = _markerImagePath,
+			Position = MathUtils.ConvertToMapPosition(WorldData.Transform),
+			Pivot = _markerPivot,
+			Text = _markerName
+		};
 
-        private void TryRemoveMarker()
-        {
-            if (_HeliCrashMarkers.Count == 0)
-            {
-                return;
-            }
+		var marker = _lastMapView.AddMapMarker(markerDef);
+		_HeliCrashMarkers.Add(marker);
+	}
 
-            _HeliCrashMarkers[0].ContainingMapView.RemoveMapMarker(_HeliCrashMarkers[0]);
-            _HeliCrashMarkers.Remove(_HeliCrashMarkers[0]);
-        }
+	private void TryRemoveMarker()
+	{
+		if (_HeliCrashMarkers.Count == 0)
+		{
+			return;
+		}
 
-        public void OnShowOutOfRaid(MapView map)
-        {
-            // do nothing
-        }
+		_HeliCrashMarkers[0].ContainingMapView.RemoveMapMarker(_HeliCrashMarkers[0]);
+		_HeliCrashMarkers.Remove(_HeliCrashMarkers[0]);
+	}
 
-        public void OnHideOutOfRaid(MapView map)
-        {
-            // do nothing
-        }
-    }
+	public void OnShowOutOfRaid(MapView map)
+	{
+		// do nothing
+	}
+
+	public void OnHideOutOfRaid(MapView map)
+	{
+		// do nothing
+	}
 }

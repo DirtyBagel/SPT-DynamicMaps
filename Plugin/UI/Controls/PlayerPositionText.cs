@@ -2,26 +2,25 @@ using DynamicMaps.Utils;
 using EFT;
 using UnityEngine;
 
-namespace DynamicMaps.UI.Controls
+namespace DynamicMaps.UI.Controls;
+
+public class PlayerPositionText : AbstractTextControl
 {
-    public class PlayerPositionText : AbstractTextControl
-    {
-        public static PlayerPositionText Create(GameObject parent, float fontSize)
-        {
-            var text = Create<PlayerPositionText>(parent, "PlayerPositionText", fontSize);
-            return text;
-        }
+	public static PlayerPositionText Create(GameObject parent, float fontSize)
+	{
+		var text = Create<PlayerPositionText>(parent, "PlayerPositionText", fontSize);
+		return text;
+	}
 
-        private void Update()
-        {
-            var player = GameUtils.GetMainPlayer();
-            if (player == null)
-            {
-                return;
-            }
+	private void Update()
+	{
+		var player = GameUtils.GetMainPlayer();
+		if (player == null)
+		{
+			return;
+		}
 
-            var mapPosition = MathUtils.ConvertToMapPosition(((IPlayer)player).Position);
-            Text.text = $"Player: {mapPosition.x:F} {mapPosition.y:F} {mapPosition.z:F}";
-        }
-    }
+		var mapPosition = MathUtils.ConvertToMapPosition(((IPlayer)player).Position);
+		Text.text = $"Player: {mapPosition.x:F} {mapPosition.y:F} {mapPosition.z:F}";
+	}
 }

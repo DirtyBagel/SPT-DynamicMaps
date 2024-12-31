@@ -73,7 +73,7 @@ public class QuestMarkerProvider : IDynamicMarkerProvider
 
 	public void OnShowOutOfRaid(MapView map)
 	{
-		// do nothing
+		AddQuestObjectiveMarkers(map);
 	}
 
 	public void OnHideOutOfRaid(MapView map)
